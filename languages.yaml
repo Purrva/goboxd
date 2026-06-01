@@ -1,0 +1,140 @@
+# Language registry for goboxd.
+#
+# Adding a language: one entry here + one install script under
+# scripts/lang_install/<id>.sh + a Docker rebuild.  No Go code change required.
+#
+# Template tokens available in args:
+#   {{source}}   – basename of the source file inside the jail
+#   {{artifact}} – basename of the compiled artifact inside the jail
+#   {{flags}}    – extra flags supplied by the caller (filtered by flag_allowlist)
+#
+# source_filename_strategy:
+#   (omit or "static")  – use the value in source_filename
+#   "from_request"      – caller must supply source_filename
+#
+# artifact_filename_strategy:
+#   (omit or "static")  – use the value in artifact_filename
+#   "from_request"      – caller must supply artifact_filename
+
+languages:
+  # ── Python 3 ──────────────────────────────────────────────────────────────
+  - id: py3
+    name: Python 3
+    source_filename: solution.py
+    run:
+      cmd: /usr/bin/python3
+      args: ["{{source}}"]
+      limits:
+        wall_time_s: 9
+        memory_kb: 102400
+        max_processes: 100
+      flag_allowlist: []
+
+  # ── Bash ──────────────────────────────────────────────────────────────────
+  - id: bash
+    name: Bash
+    source_filename: solution.sh
+    run:
+      cmd: /bin/bash
+      args: ["{{source}}"]
+      limits:
+        wall_time_s: 9
+        memory_kb: 65536
+        max_processes: 50
+      flag_allowlist: []
+
+  # ── JavaScript (Node.js) ──────────────────────────────────────────────────
+  - id: js
+    name: JavaScript (Node)
+    source_filename: solution.js
+    run:
+      cmd: /usr/bin/node
+      args: ["{{source}}"]
+      limits:
+        wall_time_s: 9
+        memory_kb: 524288
+        max_processes: 100
+      flag_allowlist: []
+
+  # ── C ─────────────────────────────────────────────────────────────────────
+  - id: c
+    name: C
+    source_filename: solution.c
+    artifact_filename: solution
+    build:
+      cmd: /usr/bin/gcc
+      args: ["{{flags}}", "-o", "{{artifact}}", "{{source}}", "-lm"]
+      limits:
+        wall_time_s: 5
+        memory_kb: 524288
+        max_processes: 100
+      flag_allowlist:
+        - "-O0"
+        - "-O1"
+        - "-O2"
+        - "-O3"
+        - "-Wall"
+        - "-Wextra"
+        - "-std=*"
+        - "-lm"
+    run:
+      cmd: "./{{artifact}}"
+      args: []
+      limits:
+        wall_time_s: 5
+        memory_kb: 262144
+        max_processes: 64
+
+  # ── C++ ───────────────────────────────────────────────────────────────────
+  - id: cpp
+    name: C++
+    source_filename: solution.cpp
+    artifact_filename: solution
+    build:
+      cmd: /usr/bin/g++
+      args: ["{{flags}}", "-o", "{{artifact}}", "{{source}}"]
+      limits:
+        wall_time_s: 5
+        memory_kb: 524288
+        max_processes: 100
+      flag_allowlist:
+        - "-O0"
+        - "-O1"
+        - "-O2"
+        - "-O3"
+        - "-Wall"
+        - "-Wextra"
+        - "-std=*"
+    run:
+      cmd: "./{{artifact}}"
+      args: []
+      limits:
+        wall_time_s: 5
+        memory_kb: 262144
+        max_processes: 64
+
+  # ── Java ──────────────────────────────────────────────────────────────────
+  # Java requires the source filename to match the public class name.
+  # The caller must supply both source_filename and artifact_filename.
+  - id: java
+    name: Java
+    source_filename_strategy: from_request
+    artifact_filename_strategy: from_request
+    build:
+      cmd: /usr/bin/javac
+      args: ["{{flags}}", "{{source}}"]
+      limits:
+        wall_time_s: 10
+        memory_kb: 524288
+        max_processes: 100
+      flag_allowlist:
+        - "-verbose"
+        - "-encoding"
+        - "UTF-8"
+    run:
+      cmd: /usr/bin/java
+      args: ["-cp", ".", "{{artifact}}"]
+      limits:
+        wall_time_s: 10
+        memory_kb: 524288
+        max_processes: 100
